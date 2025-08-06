@@ -4,6 +4,9 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
 import os
 from datetime import datetime
+from docx.oxml.shared import OxmlElement, qn
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
 
 def debug_document_content(doc):
     """
@@ -28,9 +31,24 @@ def debug_document_content(doc):
                 if text:
                     print(f"  Cell {row_idx},{cell_idx}: '{text}'")
 
-def set_paragraph_formatting(paragraph, alignment=None, font_size=None, font_name=None, bold=None, character_spacing=None):
+def add_character_scaling(run, scaling_percent):
     """
-    Set formatting for a paragraph including alignment, font properties, and character spacing.
+    Add character scaling (horizontal scaling) to a run using XML approach.
+    scaling_percent: percentage (100 = normal, 110 = 10% wider, 90 = 10% narrower)
+    """
+    if scaling_percent == 100:
+        return  # No scaling change needed
+    
+    # Create the scaling element
+    scaling_element = OxmlElement('w:w')
+    scaling_element.set(qn('w:val'), str(scaling_percent))
+    
+    # Add it to the run's XML
+    run._element.rPr.append(scaling_element)
+
+def set_paragraph_formatting(paragraph, alignment=None, font_size=None, font_name=None, bold=None, character_scaling=None):
+    """
+    Set formatting for a paragraph including alignment, font properties, and character scaling.
     """
     if alignment:
         if alignment.lower() == 'center':
@@ -50,11 +68,11 @@ def set_paragraph_formatting(paragraph, alignment=None, font_size=None, font_nam
             run.font.name = font_name
         if bold is not None:
             run.font.bold = bold
-        if character_spacing:
-            # Character spacing is set in points (1 point = 1/72 inch)
-            run.font.spacing = Pt(character_spacing)
+        if character_scaling is not None and character_scaling != 100:
+            # Use the correct character scaling method
+            add_character_scaling(run, character_scaling)
 
-def replace_name_placeholder(doc, name, alignment='center', font_size=24, font_name='Arial', bold=True, character_spacing=0):
+def replace_name_placeholder(doc, name, alignment='center', font_size=24, font_name='Arial', bold=True, character_scaling=100):
     """
     Replace the Name placeholder in the document with the provided name.
     """
@@ -63,13 +81,13 @@ def replace_name_placeholder(doc, name, alignment='center', font_size=24, font_n
     for i, paragraph in enumerate(doc.paragraphs):
         if paragraph.text.strip() == "Ally  Farah":
             paragraph.text = name
-            set_paragraph_formatting(paragraph, alignment, font_size, font_name, bold, character_spacing)
+            set_paragraph_formatting(paragraph, alignment, font_size, font_name, bold, character_scaling)
             replacements_made += 1
-            print(f"Replaced name in paragraph {i} with formatting: {alignment}, {font_size}pt, {font_name}, bold={bold}")
+            print(f"Replaced name in paragraph {i} with formatting: {alignment}, {font_size}pt, {font_name}, bold={bold}, scaling={character_scaling}%")
     
     return replacements_made
 
-def replace_company_placeholder(doc, company, alignment='center', font_size=14, font_name='Arial', bold=False, character_spacing=0):
+def replace_company_placeholder(doc, company, alignment='center', font_size=14, font_name='Arial', bold=False, character_scaling=100):
     """
     Replace the Company placeholder in the document with the provided company.
     """
@@ -78,13 +96,13 @@ def replace_company_placeholder(doc, company, alignment='center', font_size=14, 
     for i, paragraph in enumerate(doc.paragraphs):
         if "JEBSEN GROUP" in paragraph.text:
             paragraph.text = paragraph.text.replace("JEBSEN GROUP", company)
-            set_paragraph_formatting(paragraph, alignment, font_size, font_name, bold, character_spacing)
+            set_paragraph_formatting(paragraph, alignment, font_size, font_name, bold, character_scaling)
             replacements_made += 1
-            print(f"Replaced company in paragraph {i} with formatting: {alignment}, {font_size}pt, {font_name}, bold={bold}")
+            print(f"Replaced company in paragraph {i} with formatting: {alignment}, {font_size}pt, {font_name}, bold={bold}, scaling={character_scaling}%")
     
     return replacements_made
 
-def replace_date_placeholder(doc, date, alignment='center', font_size=12, font_name='Arial', bold=False, character_spacing=0):
+def replace_date_placeholder(doc, date, alignment='center', font_size=12, font_name='Arial', bold=False, character_scaling=100):
     """
     Replace the Date placeholder in the document with the provided date.
     """
@@ -93,9 +111,9 @@ def replace_date_placeholder(doc, date, alignment='center', font_size=12, font_n
     for i, paragraph in enumerate(doc.paragraphs):
         if paragraph.text.strip() == "AUGUST 7 – 8 , 2025":
             paragraph.text = date
-            set_paragraph_formatting(paragraph, alignment, font_size, font_name, bold, character_spacing)
+            set_paragraph_formatting(paragraph, alignment, font_size, font_name, bold, character_scaling)
             replacements_made += 1
-            print(f"Replaced date in paragraph {i} with formatting: {alignment}, {font_size}pt, {font_name}, bold={bold}")
+            print(f"Replaced date in paragraph {i} with formatting: {alignment}, {font_size}pt, {font_name}, bold={bold}, scaling={character_scaling}%")
     
     return replacements_made
 
@@ -127,7 +145,7 @@ def main():
         'font_size': 60,            # Font size in points
         'font_name': 'Arial',       # Font family
         'bold': True,               # True/False
-        'character_spacing': 2      # Spacing in points (0 = normal)
+        'character_scaling': 110    # Character scaling percentage (100 = normal, 110 = 10% wider)
     }
     
     # Company formatting options
@@ -136,7 +154,7 @@ def main():
         'font_size': 16,
         'font_name': 'Poppins',
         'bold': False,
-        'character_spacing': 101
+        'character_scaling': 110    # 110% character scaling
     }
     
     # Date formatting options
@@ -145,7 +163,7 @@ def main():
         'font_size': 14,
         'font_name': 'Garet',
         'bold': False,
-        'character_spacing': 0
+        'character_scaling': 100    # Normal character scaling
     }
     
     # Output filename
