@@ -1,0 +1,16 @@
+What am i looking to do ? : 
+
+
+    Create a script which can auto fill certificates issued by my company which is in the format of a word doc and after making the changes convert it into a pdf while retaning the formatting and in the required Font
+    The script needs to edit the placeholder values of 
+    1. Name
+    2. Company
+    3. Month & Date 
+
+    the word doc is the "t.docx" 
+
+
+
+Lets go step by step and make one addition at a time. First write code to edit the placeholder Name, then company and then finally Month&Date. 
+
+
